@@ -33,6 +33,7 @@ logger = logging.getLogger("mobilerun")
 
 
 SUPPORTED_PROVIDERS = [
+    "LMStudio",
     "OpenAIResponses",
     "OpenAILike",
     "GoogleGenAI",
@@ -45,6 +46,9 @@ SUPPORTED_PROVIDERS = [
 ]
 
 PROVIDER_ALIASES = {
+    "lmstudio": "LMStudio",
+    "lm-studio": "LMStudio",
+    "lm studio": "LMStudio",
     "openai": "OpenAIResponses",
     "gpt": "OpenAIResponses",
     "gemini": "GoogleGenAI",
@@ -558,6 +562,21 @@ def load_llm(provider_name: str, model: str | None = None, **kwargs: Any) -> LLM
         from mobilerun.agent.utils.oauth.grok_oauth_llm import GrokOAuth
 
         return GrokOAuth(**{k: v for k, v in kwargs.items() if v is not None})
+
+    if provider_name == "LMStudio":
+        import os
+
+        provider_name = "OpenAILike"
+        base_url = kwargs.pop("base_url", None)
+        kwargs["api_base"] = kwargs.get("api_base") or base_url or os.environ.get(
+            "LM_STUDIO_BASE_URL", "http://localhost:1234/v1"
+        )
+        # Never forward an unrelated cloud OPENAI_API_KEY to a local server.
+        kwargs["api_key"] = kwargs.get("api_key") or os.environ.get(
+            "LM_STUDIO_API_KEY"
+        ) or "lm-studio"
+        kwargs.setdefault("is_chat_model", True)
+        kwargs.setdefault("is_function_calling_model", False)
 
     # Legacy aliases: MiniMax and DeepSeek route through OpenAILike.
     if provider_name == "MiniMax":
